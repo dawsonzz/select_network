@@ -81,11 +81,11 @@ public:
         int ret = connect(_sock, (sockaddr*)&_sin, sizeof(sockaddr_in));
         if(SOCKET_ERROR == ret)
         {
-            printf("错误， 链接服务器失败。。。\n");
+            printf("<socket=%d>错误， 链接服务器<%s:%d>失败。。。\n", _sock, ip, port);
         }
         else
         {
-            printf("连接服务器成功。。。\n");
+            printf("<socket=%d>连接服务器<%s:%d>成功。。。\n", _sock, ip, port);
         }
         return ret;
     }
@@ -118,6 +118,7 @@ public:
             if(ret < 0)
             {
                 printf("<socket=%d>select任务结束1\n", _sock);
+                Close();
                 return false;
             }
             if(FD_ISSET(_sock, &fdReads))
@@ -126,6 +127,7 @@ public:
                 if( -1 == RecvData(_sock))
                 {
                     printf("<socket=%d>select任务结束2\n", _sock);
+                    Close();
                     return false;
                 }
             }
@@ -148,7 +150,7 @@ public:
         DataHeader* header = (DataHeader*)szRecv;
         if(nLen <= 0)
         {
-            printf("与服务器断开连接， 任务结束。\n");
+            printf("<socket=%d>与服务器断开连接， 任务结束。\n", _sock);
             return -1;
         }
         recv(_cSock, szRecv+sizeof(DataHeader), header->dataLength-sizeof(DataHeader), 0);
@@ -166,20 +168,23 @@ public:
             case CMD_LOGIN_RESULT:
             {
                 LoginResult* login = (LoginResult*)header;
-                printf("收到服务端消息 CMD_LOGIN_RESULT 数据长度：%d  \n", login->dataLength);
+                printf("<socket=%d>收到服务端消息 CMD_LOGIN_RESULT 数据长度：%d  \n",
+                _sock, login->dataLength);
             }
             break;
             case CMD_LOGOUT_RESULT:
             {   
                 LogoutResult* logout = (LogoutResult*)header;
-                printf("收到服务端消息 CMD_LOGOUT_RESULT 数据长度：%d  \n", logout->dataLength);
+                printf("<socket=%d>收到服务端消息 CMD_LOGOUT_RESULT 数据长度：%d  \n",
+                _sock, logout->dataLength);
 
             }
             break;
             case CMD_NEW_USER_JOIN:
             {
                 NewUserJoin* userjoin = (NewUserJoin*)header;
-                printf("收到服务端消息 CMD_NEW_USER_JOIN 数据长度：%d  \n", userjoin->dataLength);
+                printf("<socket=%d>收到服务端消息 CMD_NEW_USER_JOIN 数据长度：%d  \n", 
+                _sock, userjoin->dataLength);
 
             }
             break;
