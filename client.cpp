@@ -1,7 +1,8 @@
 #include "EasyTcpClient.hpp"
 #include <thread>
 
-void cmdThread(EasyTcpClient* client)
+bool g_bRun = true;
+void cmdThread()
 {
     while(true)
     {
@@ -9,48 +10,51 @@ void cmdThread(EasyTcpClient* client)
         scanf("%s", cmdBuf);
         if(0 == strcmp(cmdBuf, "exit"))
         {
-            client->Close();
+            g_bRun = false;
             printf("退出cmdThread\n");
             break;
-        }
-        else if(0 == strcmp(cmdBuf, "login"))
-        {
-            Login login;
-            strcpy(login.userName, "lyd");
-            strcpy(login.passWord, "lyd");
-            client->SendData(&login);
-        }
-        else if(0 == strcmp(cmdBuf, "logout"))
-        {
-            Logout login;
-            strcpy(login.userName, "lyd");
-            client->SendData(&login);
         }
         else
         {
             printf("不支持命令");
         }
     }
-    
-    
-
 }
-
 
 int main()
 {
-    EasyTcpClient client;
+    //windows中fd_set决定最大数量为63个客户端+1个服务器
+    //linux中最大数量为1000
+    const int cCount = 10;
+    EasyTcpClient* client[cCount];
+    for(int n=0; n<cCount; n++)
+    {
+        client[n] = new EasyTcpClient();
+        client[n]->Connect("127.0.0.1", 4567);
+    }
     // client.initSocket();
-    client.Connect("127.0.0.1", 4567);
     
-    std::thread t1(cmdThread, &client);
+    
+    std::thread t1(cmdThread);
     t1.detach();
 
-    while(client.isRun())
+    Login login;
+    strcpy(login.userName, "lyd");
+    strcpy(login.passWord, "lyd");
+
+    while(g_bRun)
     {
-        client.OnRun();
+        for(int n=0; n<cCount; n++)
+        {
+            client[n]->SendData(&login);
+            // client[n]->OnRun();
+        }
     }
-    client.Close();
+
+    for(int n=0; n<cCount; n++)
+    {
+        client[n]->Close();
+    }
 
     printf("已退出。\n");
     getchar();
