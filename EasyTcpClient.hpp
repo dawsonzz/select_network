@@ -161,7 +161,7 @@ public:
     }
 
     //响应
-    void OnNetMsg(DataHeader* header)
+    virtual void OnNetMsg(DataHeader* header)
     {
         switch(header->cmd)
         {
