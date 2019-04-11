@@ -3,6 +3,7 @@
 #include "MessageHeader.hpp"
 
 #ifdef _WIN32
+    #define FD_SETSIZE 64
     #include <windows.h>
     #include <WinSock2.h>
     #pragma comment(lib, "ws2_32.lib");
@@ -257,6 +258,7 @@ public:
                 Close();
                 return false;
             }
+            // printf("length %d\n", _clients.size());
             if(FD_ISSET(_sock, &fdRead))
             {
                 FD_CLR(_sock,  &fdRead);
