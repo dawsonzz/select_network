@@ -27,6 +27,7 @@
 #include <stdio.h>
 #include <vector>
 #include <thread>
+#include "CELLTimestamp.hpp"
 
 class ClientSocket
 {
@@ -68,10 +69,11 @@ private:
 
 class EasyTcpServer
 {
+private:
     SOCKET _sock;
     std::vector<ClientSocket*> _clients;
-
-private:
+    CELLTimestamp _tTime;
+    int _recvCount = 0;
 
 public:
     EasyTcpServer()
@@ -331,39 +333,47 @@ public:
     //响应网络数据
     virtual void OnNetMsg(SOCKET cSock, DataHeader* header)
     {
-    switch(header->cmd)
-    {
-        case CMD_LOGIN:
+        _recvCount++;
+        auto t1 =_tTime.getElapsedSecond();
+        if(t1 >=1.0)
         {
-            Login* login = (Login*)header;
-            // printf("收到<Socket = %d>命令：CMD_LOGIN 数据长度：%d  userName=%s PassWord=%s\n",
-            //         cSock, login->dataLength, login->userName, login->passWord);
+            printf("time<%lf>, socket<%d>, clients<%lu>, _recvCount<%d>\n", t1, _sock, _clients.size(),_recvCount);
+            _tTime.update();
+            _recvCount = 0;
+        }
+        switch(header->cmd)
+        {
+            case CMD_LOGIN:
+            {
+                Login* login = (Login*)header;
+                // printf("收到<Socket = %d>命令：CMD_LOGIN 数据长度：%d  userName=%s PassWord=%s\n",
+                //         cSock, login->dataLength, login->userName, login->passWord);
 
-            //判断用户密码是否正确
-            // LoginResult ret;
-            // SendData(cSock, &ret);
-        }
-        break;
-        case CMD_LOGOUT:
-        {   
-            Logout* logout = (Logout*) header;
-            // printf("收到<Socket = %d>命令：CMD_LOGOUT 数据长度：%d\n",
-                    // cSock, logout->dataLength);
-            //判断用户密码是否正确
-            // LogoutResult ret;
-            // SendData(cSock, &ret);
-        }
-        break;
-        default:
-        {
-            // DataHeader header;
-            // SendData(cSock, &header);
-            printf("收到<Socket = %d>未定义消息 数据长度：%d\n",
-                    cSock, header->dataLength);
-            
-        }
-        break;
-        }
+                //判断用户密码是否正确
+                // LoginResult ret;
+                // SendData(cSock, &ret);
+            }
+            break;
+            case CMD_LOGOUT:
+            {   
+                Logout* logout = (Logout*) header;
+                // printf("收到<Socket = %d>命令：CMD_LOGOUT 数据长度：%d\n",
+                        // cSock, logout->dataLength);
+                //判断用户密码是否正确
+                // LogoutResult ret;
+                // SendData(cSock, &ret);
+            }
+            break;
+            default:
+            {
+                // DataHeader header;
+                // SendData(cSock, &header);
+                printf("收到<Socket = %d>未定义消息 数据长度：%d\n",
+                        cSock, header->dataLength);
+                
+            }
+            break;
+            }
     }
 
     //发送指定socket数据

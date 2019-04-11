@@ -26,7 +26,7 @@ int main()
     //windows中fd_set决定最大数量为63个客户端+1个服务器
     //mac 和 windows 修改宏定义
     //linux中最大数量为1024，且写在内核中无法修改
-    const int cCount = 200;
+    const int cCount = 10;
     //TODO: mac中数量超过252连接失败，客户端二次连接程序报错
 
     EasyTcpClient* client[cCount];
