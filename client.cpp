@@ -1,5 +1,6 @@
 #include "EasyTcpClient.hpp"
 #include <thread>
+#include <chrono>
 
 bool g_bRun = true;
 void cmdThread()
@@ -24,7 +25,7 @@ void cmdThread()
 //windows中fd_set决定最大数量为63个客户端+1个服务器
 //mac 和 windows 修改宏定义
 //linux中最大数量为1024，且写在内核中无法修改
-const int cCount = 100;
+const int cCount = 10;
 //TODO: mac中数量超过252连接失败，客户端二次连接程序报错
 
 //线程数量
@@ -46,9 +47,12 @@ void sendThread(int id) //四个线程 ID1～4
     for(int n=begin; n<end; n++)
     {
         client[n]->Connect("127.0.0.1", 4567);
+        printf("thread<%d>, Connect = %d\n", id, n);
     }
     
     
+    std::chrono::milliseconds t(3000);
+    std::this_thread::sleep_for(t);
     
     Login login;
     strcpy(login.userName, "lyd");
