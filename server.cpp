@@ -20,13 +20,35 @@ void cmdThread()
     }
 }
 
+
+class MyServer : public EasyTcpServer
+{
+public:
+    virtual void OnNetJoin(ClientSocket* pClient)
+    {
+        printf("client<%d> join\n", pClient->sockfd());
+    }
+
+
+    virtual void OnLeave(ClientSocket* pClient)
+    {
+        printf("client<%d> exit\n", pClient->sockfd());
+    }
+
+    virtual void OnNetMsg(ClientSocket* pClient, DataHeader* header)
+    {
+    }
+
+};
+
 int main()
 {
-    EasyTcpServer server;
+    MyServer server;
+    // EasyTcpServer server;
     server.InitSocket();
     server.Bind(nullptr, 4567);
     server.Listen(5);
-    server.Start();
+    server.Start(4);
 
     std::thread t1(cmdThread);
     t1.detach();
