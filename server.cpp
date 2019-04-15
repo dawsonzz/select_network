@@ -26,17 +26,58 @@ class MyServer : public EasyTcpServer
 public:
     virtual void OnNetJoin(ClientSocket* pClient)
     {
+        _clientCount++;
         printf("client<%d> join\n", pClient->sockfd());
     }
 
 
-    virtual void OnLeave(ClientSocket* pClient)
+    virtual void OnNetLeave(ClientSocket* pClient)
     {
+        _clientCount--;
         printf("client<%d> exit\n", pClient->sockfd());
     }
 
     virtual void OnNetMsg(ClientSocket* pClient, DataHeader* header)
     {
+        _msgCount++;
+        switch(header->cmd)
+        {
+            case CMD_LOGIN:
+            {
+                Login* login = (Login*)header;
+                // printf("收到<Socket = %d>命令：CMD_LOGIN 数据长度：%d  userName=%s PassWord=%s\n",
+                //         cSock, login->dataLength, login->userName, login->passWord);
+
+                // 判断用户密码是否正确
+                // LoginResult ret;
+                // pClient->SendData(&ret);
+            }
+            break;
+            case CMD_LOGOUT:
+            {   
+                Logout* logout = (Logout*) header;
+                // printf("收到<Socket = %d>命令：CMD_LOGOUT 数据长度：%d\n",
+                        // cSock, logout->dataLength);
+                //判断用户密码是否正确
+                // LogoutResult ret;
+                // SendData(cSock, &ret);
+            }
+            break;
+            default:
+            {
+                // DataHeader header;
+                // SendData(cSock, &header);
+                printf("收到<Socket = %d>未定义消息 数据长度：%d\n",
+                        pClient->sockfd(), header->dataLength);
+                
+            }
+            break;
+            }
+    }
+
+    virtual void OnNetRecv(ClientSocket* pClient)
+    {
+        _recvCount++;
     }
 
 };

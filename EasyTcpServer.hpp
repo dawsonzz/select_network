@@ -30,6 +30,7 @@
 #include <mutex>
 #include <atomic>
 #include "CELLTimestamp.hpp"
+#include <map>
 
 class ClientSocket
 {
@@ -86,9 +87,11 @@ public:
     //客户端加入  
     virtual void OnNetJoin(ClientSocket* pClient) = 0;//纯虚函数
     //客户端离开
-    virtual void OnLeave(ClientSocket* pClient) = 0;//纯虚函数
+    virtual void OnNetLeave(ClientSocket* pClient) = 0;//纯虚函数
     //客户端消息
     virtual void OnNetMsg(ClientSocket* pClient, DataHeader* header) = 0;//纯虚函数
+     //recv消息
+    virtual void OnNetRecv(ClientSocket* pClient) = 0;//纯虚函
 };
 
 class CellServer
@@ -121,18 +124,18 @@ public:
         if(_sock != INVALID_SOCKET)
         {
 #ifdef _WIN32
-            for(int n=0; n<_clients.size(); n++)
+            for(auto iter : _clients)
             {
-                closesocket(_clients[n]->sockfd());
-                delete _clients[n];
+                closesocket(iter.second->sockfd());
+                delete iter.second;
             }
             closesocket(_sock);
             
 #else
-            for(int n=0; n<_clients.size(); n++)
+            for(auto iter : _clients)
                 {
-                    close(_clients[n]->sockfd());
-                    delete _clients[n];
+                    close(iter.second->sockfd());
+                    delete iter.second;
                 }
             close(_sock);
 #endif      
@@ -148,7 +151,11 @@ public:
     }
 
     //处理网络消息
-    // int _ncount = 0;
+    // 备份socket fd_set
+    fd_set _fdRead_bak;
+    //客户列表是否有变化
+    bool _clients_change;
+    SOCKET _maxSock;
     bool OnRun()
     {
         while(isRun())
@@ -159,9 +166,10 @@ public:
                 std::lock_guard<std::mutex> lock(_mutex);
                 for(auto pClient : _clientsBuff)
                 {
-                    _clients.push_back(pClient);
+                    _clients[pClient->sockfd()]=pClient;
                 }
                 _clientsBuff.clear();
+                _clients_change = true;
             }
             if(_clients.empty())
             {
@@ -173,43 +181,60 @@ public:
             fd_set fdRead;
 
             FD_ZERO(&fdRead); //清空
-
-            SOCKET maxSock = _clients[0]->sockfd();
-
-            for(int64_t n=0; n<_clients.size(); n++)
+            if(_clients_change)
             {
-                FD_SET(_clients[n]->sockfd(), &fdRead);
-                if(maxSock < _clients[n]->sockfd())
+                _clients_change = false;
+                _maxSock = _clients.begin()->second->sockfd();
+
+                for(auto iter : _clients)
                 {
-                    maxSock = _clients[n]->sockfd();
+                    FD_SET(iter.second->sockfd(), &fdRead);
+                    if(_maxSock < iter.second->sockfd())
+                    {
+                        _maxSock = iter.second->sockfd();
+                    }
                 }
+                memcpy(&_fdRead_bak, &fdRead, sizeof(fd_set));;
             }
+            else
+            {
+                memcpy(&fdRead, &_fdRead_bak, sizeof(fd_set));
+            }
+            
+            
             //nfds 是一个整数，描述socket的范围而不是数量
             timeval t = {1, 0};
-            int ret = select(maxSock+1, &fdRead, nullptr, nullptr, nullptr);
+            int ret = select(_maxSock+1, &fdRead, nullptr, nullptr, nullptr);
             if(ret < 0)
             {
                 printf("select 任务结束\n");
                 Close();
                 return false;
             }
-
-            for(int n = (int)_clients.size() - 1; n>=0; n--)
+            else if (ret ==0)
             {
-                if(FD_ISSET(_clients[n]->sockfd(), &fdRead))
+                continue;
+            }
+
+
+            std::vector<ClientSocket*> temp;
+            for(auto iter : _clients)
+            {
+                if(FD_ISSET(iter.second->sockfd(), &fdRead))
                 {
-                    if(-1 == RecvData(_clients[n]))
+                    if(-1 == RecvData(iter.second))
                     {
-                        auto iter = _clients.begin() + n;
-                        if(iter != _clients.end())
-                        {
-                            if(_pNetEvent)
-                                _pNetEvent->OnLeave(_clients[n]);
-                            delete _clients[n];
-                            _clients.erase(iter);
-                        }
+                        if(_pNetEvent)
+                            _pNetEvent->OnNetLeave(iter.second);
+                        _clients_change = true;
+                        temp.push_back(iter.second);
                     }
                 }
+            }
+            for(auto pClient : temp)
+            {
+                _clients.erase(pClient->sockfd());
+                delete pClient;
             }   
         }
     }
@@ -219,6 +244,7 @@ public:
     int RecvData(ClientSocket* pClient)
     {
         int nLen = recv(pClient->sockfd(), _szRecv, sizeof(_szRecv), 0);
+        _pNetEvent->OnNetRecv(pClient);
 
         if(nLen <= 0)
         {
@@ -323,7 +349,7 @@ public:
 private:
     SOCKET _sock;
     //正式客户队列
-    std::vector<ClientSocket*> _clients;
+    std::map<SOCKET, ClientSocket*> _clients;
     //客户缓冲区
     std::vector<ClientSocket*> _clientsBuff;
     //缓冲队列锁
@@ -340,7 +366,10 @@ private:
     std::vector<CellServer*> _cellServers;
     //每秒消息计时
     CELLTimestamp _tTime;
+
+protected:
     std::atomic_int _recvCount;
+    std::atomic_int _msgCount;
     //客户端计数
     std::atomic_int _clientCount;
     
@@ -351,6 +380,7 @@ public:
         _sock = INVALID_SOCKET;
         _recvCount = 0;
         _clientCount = 0;
+        _msgCount = 0;
     }
 
     virtual ~EasyTcpServer()
@@ -561,10 +591,11 @@ public:
         auto t1 =_tTime.getElapsedSecond();
         if(t1 >=1.0)
         {
-            printf("thread<%lu>, time<%lf>, socket<%d>, clients<%d>, _recvCount<%d>\n",
-            _cellServers.size(), t1, _sock, (int)_clientCount, (int)(_recvCount/t1));
+            printf("thread<%lu>, time<%lf>, socket<%d>, clients<%d>, recv<%d>, msg<%d>\n",
+            _cellServers.size(), t1, _sock, (int)_clientCount, (int)(_recvCount/t1), int(_msgCount/t1));
             _tTime.update();
             _recvCount = 0;
+            _msgCount = 0;
         }
     }
 
@@ -574,7 +605,7 @@ public:
     }
 
 
-    virtual void OnLeave(ClientSocket* pClient)
+    virtual void OnNetLeave(ClientSocket* pClient)
     {
         _clientCount--;
     }

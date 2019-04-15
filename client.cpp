@@ -64,7 +64,7 @@ void sendThread(int id) //四个线程 ID1～4
         for(int n=begin; n<end; n++)
         {
             client[n]->SendData(&login, sizeof(login));
-            client[n]->OnRun();
+            // client[n]->OnRun();
         }
     }
 
