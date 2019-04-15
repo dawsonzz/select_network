@@ -1,6 +1,8 @@
 #include "EasyTcpClient.hpp"
+#include "CELLTimestamp.hpp"
 #include <thread>
 #include <chrono>
+#include <atomic>
 
 bool g_bRun = true;
 void cmdThread()
@@ -25,14 +27,15 @@ void cmdThread()
 //windows中fd_set决定最大数量为63个客户端+1个服务器
 //mac 和 windows 修改宏定义
 //linux中最大数量为1024，且写在内核中无法修改
-const int cCount = 10;
+const int cCount = 8;
 //TODO: mac中数量超过252连接失败，客户端二次连接程序报错
 
 //线程数量
 const int tCount = 4;
 
 EasyTcpClient* client[cCount];
-
+std::atomic_int sendCount;
+std::atomic_int readyCount;
 void sendThread(int id) //四个线程 ID1～4
 {
     printf("thread<%d>, start\n", id);
@@ -52,8 +55,14 @@ void sendThread(int id) //四个线程 ID1～4
 
     printf("thread<%d>, Connect<begin=%d, end=%d>\n", id, begin, end);
     
-    std::chrono::milliseconds t(1000);
-    std::this_thread::sleep_for(t);
+    readyCount++;
+    while( readyCount < tCount)
+    {
+        //等待其他线程准备好发送数据
+        std::chrono::milliseconds t(10);
+        std::this_thread::sleep_for(t);
+    }
+
     
     Login login;
     strcpy(login.userName, "lyd");
@@ -63,7 +72,10 @@ void sendThread(int id) //四个线程 ID1～4
     {
         for(int n=begin; n<end; n++)
         {
-            client[n]->SendData(&login, sizeof(login));
+            if(SOCKET_ERROR != client[n]->SendData(&login, sizeof(login)))
+            {
+                sendCount++;
+            }
             // client[n]->OnRun();
         }
     }
@@ -94,9 +106,19 @@ int main()
         t1.detach();
     }
 
+    CELLTimestamp tTime;
+
     while(g_bRun)
     {
-        sleep(100);
+        auto t = tTime.getElapsedSecond();
+        if(t>=1.0)
+        {
+            printf("thread<%d>, clients<%d>, time<%lf>, send<%d>\n",
+                tCount, cCount, t, (int)(sendCount/t));
+            sendCount = 0;
+            tTime.update();
+        }
+        sleep(1);
     }
 
     printf("已退出。\n");
