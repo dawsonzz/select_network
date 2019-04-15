@@ -240,10 +240,11 @@ public:
     }
 
     //接受数据 处理粘包 拆分宝
-    char _szRecv[RECV_BUFF_SIZE] = {};
+    // char _szRecv[RECV_BUFF_SIZE] = {};
     int RecvData(ClientSocket* pClient)
     {
-        int nLen = recv(pClient->sockfd(), _szRecv, sizeof(_szRecv), 0);
+        char* szRecv = pClient->msgBuf() + pClient->getLastPos();
+        int nLen = recv(pClient->sockfd(), szRecv, RECV_BUFF_SIZE * 5 - pClient->getLastPos(), 0);
         _pNetEvent->OnNetRecv(pClient);
 
         if(nLen <= 0)
@@ -251,7 +252,7 @@ public:
             printf("客户端<Socket = %d>已推出， 任务结束。\n", pClient->sockfd());
             return -1;
         }
-        memcpy(pClient->msgBuf()+ pClient->getLastPos(), _szRecv, nLen);
+        // memcpy(pClient->msgBuf()+ pClient->getLastPos(), _szRecv, nLen);
         //消息缓冲区的数据尾部位置后移
         pClient->setLastPos(pClient->getLastPos() + nLen);
         //判断消息缓冲区的数据长度是否大于消息头
