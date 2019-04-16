@@ -26,20 +26,18 @@ class MyServer : public EasyTcpServer
 public:
     virtual void OnNetJoin(ClientSocket* pClient)
     {
-        _clientCount++;
-        printf("client<%d> join\n", pClient->sockfd());
+        EasyTcpServer::OnNetJoin(pClient);
     }
 
 
     virtual void OnNetLeave(ClientSocket* pClient)
     {
-        _clientCount--;
-        printf("client<%d> exit\n", pClient->sockfd());
+        EasyTcpServer::OnNetLeave(pClient);
     }
 
-    virtual void OnNetMsg(ClientSocket* pClient, DataHeader* header)
+    virtual void OnNetMsg(CellServer* pCellServer, ClientSocket* pClient, DataHeader* header)
     {
-        _msgCount++;
+        EasyTcpServer::OnNetMsg(pCellServer, pClient, header);
         switch(header->cmd)
         {
             case CMD_LOGIN:
@@ -49,8 +47,9 @@ public:
                 //         cSock, login->dataLength, login->userName, login->passWord);
 
                 // 判断用户密码是否正确
-                // LoginResult ret;
+                LoginResult* ret = new LoginResult();
                 // pClient->SendData(&ret);
+                pCellServer->addSendTask(pClient, ret);
             }
             break;
             case CMD_LOGOUT:
@@ -75,10 +74,6 @@ public:
             }
     }
 
-    virtual void OnNetRecv(ClientSocket* pClient)
-    {
-        _recvCount++;
-    }
 
 };
 

@@ -76,7 +76,7 @@ void sendThread(int id) //四个线程 ID1～4
             {
                 sendCount++;
             }
-            // client[n]->OnRun();
+            client[n]->OnRun();
         }
     }
 
