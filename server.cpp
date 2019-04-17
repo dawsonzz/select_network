@@ -24,18 +24,18 @@ void cmdThread()
 class MyServer : public EasyTcpServer
 {
 public:
-    virtual void OnNetJoin(ClientSocket* pClient)
+    virtual void OnNetJoin(ClientSocketPtr& pClient)
     {
         EasyTcpServer::OnNetJoin(pClient);
     }
 
 
-    virtual void OnNetLeave(ClientSocket* pClient)
+    virtual void OnNetLeave(ClientSocketPtr& pClient)
     {
         EasyTcpServer::OnNetLeave(pClient);
     }
 
-    virtual void OnNetMsg(CellServer* pCellServer, ClientSocket* pClient, DataHeader* header)
+    virtual void OnNetMsg(CellServer* pCellServer, ClientSocketPtr pClient, DataHeader* header)
     {
         EasyTcpServer::OnNetMsg(pCellServer, pClient, header);
         switch(header->cmd)
@@ -48,8 +48,9 @@ public:
 
                 // 判断用户密码是否正确
                 LoginResult* ret = new LoginResult();
-                // pClient->SendData(&ret);
                 pCellServer->addSendTask(pClient, ret);
+                // auto ret = std::make_shared<LoginResult>();
+                // pCellServer->addSendTask(pClient, (DataHeaderPtr)ret);
             }
             break;
             case CMD_LOGOUT:
