@@ -118,40 +118,71 @@ public:
             
             
             //nfds 是一个整数，描述socket的范围而不是数量
-            timeval t = {0, 10};
-            int ret = select(_maxSock+1, &fdRead, nullptr, nullptr, nullptr);
+            timeval t = {0, 1};
+            int ret = select(_maxSock+1, &fdRead, nullptr, nullptr, &t);
             if(ret < 0)
             {
                 printf("select 任务结束\n");
                 Close();
                 return;
             }
-            else if (ret ==0)
+            // else if (ret ==0)
+            // {
+            //     continue;
+            // }
+
+            ReadData(fdRead);
+            CheckTime();
+        }
+    }
+
+    time_t _oldTime = CELLTime::getNowInMilliSec();
+    void CheckTime()
+    {
+        auto nowTime = CELLTime::getNowInMilliSec();
+        auto dt = nowTime - _oldTime;
+        _oldTime = nowTime;
+
+        std::vector<CellClient*> temp;
+        for(auto iter :_clients)
+        {
+            if(iter.second->checkHeart(dt))
             {
-                continue;
+                if(_pNetEvent)
+                    _pNetEvent->OnNetLeave(iter.second);
+                _clients_change = true;
+                temp.push_back(iter.second);
             }
-
-
-            std::vector<CellClient*> temp;
-            for(auto iter : _clients)
+        }
+        for(auto pClient : temp)
+        {
+            _clients.erase(pClient->sockfd());
+            delete pClient;
+        }   
+        
+    }
+    void ReadData(fd_set& fdRead)
+    {
+        std::vector<CellClient*> temp;
+        for(auto iter : _clients)
+        {
+            if(FD_ISSET(iter.second->sockfd(), &fdRead))
             {
-                if(FD_ISSET(iter.second->sockfd(), &fdRead))
+                if(-1 == RecvData(iter.second))
                 {
-                    if(-1 == RecvData(iter.second))
-                    {
-                        if(_pNetEvent)
-                            _pNetEvent->OnNetLeave(iter.second);
-                        _clients_change = true;
-                        temp.push_back(iter.second);
-                    }
+                    if(_pNetEvent)
+                        _pNetEvent->OnNetLeave(iter.second);
+                    _clients_change = true;
+                    temp.push_back(iter.second);
                 }
             }
-            for(auto pClient : temp)
-            {
-                _clients.erase(pClient->sockfd());
-                delete pClient;
-            }   
         }
+        for(auto pClient : temp)
+        {
+            _clients.erase(pClient->sockfd());
+            delete pClient;
+        }   
+        
     }
 
     //接受数据 处理粘包 拆分宝
@@ -262,14 +293,14 @@ public:
         return _clients.size() + _clientsBuff.size();
     }
 
-    void addSendTask(CellClient* pClient, netmsg_DataHeader* header)
-    {
-        // CellsendMsg2ClientTask* task = new CellsendMsg2ClientTask(pClient, header);
-        _taskServer.addTask([pClient, header](){
-            pClient->SendData(header);
-            delete header;
-        });
-    }
+    // void addSendTask(CellClient* pClient, netmsg_DataHeader* header)
+    // {
+    //     // CellsendMsg2ClientTask* task = new CellsendMsg2ClientTask(pClient, header);
+    //     _taskServer.addTask([pClient, header](){
+    //         pClient->SendData(header);
+    //         delete header;
+    //     });
+    // }
 
 private:
     SOCKET _sock;

@@ -47,9 +47,10 @@ public:
                 //         cSock, login->dataLength, login->userName, login->passWord);
 
                 // 判断用户密码是否正确
-                netmsg_LoginR* ret = new netmsg_LoginR();
-                // pClient->SendData(&ret);
-                pCellServer->addSendTask(pClient, ret);
+                netmsg_LoginR ret;
+                // netmsg_LoginR* ret = new netmsg_LoginR();
+                pClient->SendData(&ret);
+                // pCellServer->addSendTask(pClient, ret);
             }
             break;
             case CMD_LOGOUT:
@@ -60,6 +61,13 @@ public:
                 //判断用户密码是否正确
                 // netmsg_LogoutResult ret;
                 // SendData(cSock, &ret);
+            }
+            break;
+            case CMD_C2S_HEART:
+            {
+                pClient->resetDtHeart();
+                netmsg_s2c_Heart ret;
+                pClient->SendData(&ret);
             }
             break;
             default:
