@@ -24,47 +24,47 @@ void cmdThread()
 class MyServer : public EasyTcpServer
 {
 public:
-    virtual void OnNetJoin(ClientSocket* pClient)
+    virtual void OnNetJoin(CellClient* pClient)
     {
         EasyTcpServer::OnNetJoin(pClient);
     }
 
 
-    virtual void OnNetLeave(ClientSocket* pClient)
+    virtual void OnNetLeave(CellClient* pClient)
     {
         EasyTcpServer::OnNetLeave(pClient);
     }
 
-    virtual void OnNetMsg(CellServer* pCellServer, ClientSocket* pClient, DataHeader* header)
+    virtual void OnNetMsg(CellServer* pCellServer, CellClient* pClient, netmsg_DataHeader* header)
     {
         EasyTcpServer::OnNetMsg(pCellServer, pClient, header);
         switch(header->cmd)
         {
             case CMD_LOGIN:
             {
-                Login* login = (Login*)header;
+                netmsg_Login* login = (netmsg_Login*)header;
                 // printf("收到<Socket = %d>命令：CMD_LOGIN 数据长度：%d  userName=%s PassWord=%s\n",
                 //         cSock, login->dataLength, login->userName, login->passWord);
 
                 // 判断用户密码是否正确
-                LoginResult* ret = new LoginResult();
+                netmsg_LoginR* ret = new netmsg_LoginR();
                 // pClient->SendData(&ret);
                 pCellServer->addSendTask(pClient, ret);
             }
             break;
             case CMD_LOGOUT:
             {   
-                Logout* logout = (Logout*) header;
+                netmsg_Logout* logout = (netmsg_Logout*) header;
                 // printf("收到<Socket = %d>命令：CMD_LOGOUT 数据长度：%d\n",
                         // cSock, logout->dataLength);
                 //判断用户密码是否正确
-                // LogoutResult ret;
+                // netmsg_LogoutResult ret;
                 // SendData(cSock, &ret);
             }
             break;
             default:
             {
-                // DataHeader header;
+                // netmsg_DataHeader header;
                 // SendData(cSock, &header);
                 printf("收到<Socket = %d>未定义消息 数据长度：%d\n",
                         pClient->sockfd(), header->dataLength);

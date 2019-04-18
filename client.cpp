@@ -64,7 +64,7 @@ void sendThread(int id) //四个线程 ID1～4
     }
 
     
-    Login login;
+    netmsg_Login login;
     strcpy(login.userName, "lyd");
     strcpy(login.passWord, "lyd");
 

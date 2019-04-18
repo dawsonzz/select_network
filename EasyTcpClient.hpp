@@ -173,10 +173,10 @@ public:
         //消息缓冲区的数据尾部位置后移
         _lastPos += nLen;
         //判断消息缓冲区的数据长度是否大于消息头
-        while(_lastPos >= sizeof(DataHeader))
+        while(_lastPos >= sizeof(netmsg_DataHeader))
         {
             //这时就可以知道当前消息体的长度
-            DataHeader* header = (DataHeader*)_szMsgBuf;
+            netmsg_DataHeader* header = (netmsg_DataHeader*)_szMsgBuf;
             if(_lastPos > header->dataLength)
             {
                 //剩余未处理消息缓冲区数据的长度
@@ -195,7 +195,7 @@ public:
             
         }
 
-        // recv(cSock, szRecv+sizeof(DataHeader), header->dataLength-sizeof(DataHeader), 0);
+        // recv(cSock, szRecv+sizeof(netmsg_DataHeader), header->dataLength-sizeof(netmsg_DataHeader), 0);
         // OnNetMsg(header);
 
         
@@ -203,20 +203,20 @@ public:
     }
 
     //响应
-    virtual void OnNetMsg(DataHeader* header)
+    virtual void OnNetMsg(netmsg_DataHeader* header)
     {
         switch(header->cmd)
         {
             case CMD_LOGIN_RESULT:
             {
-                LoginResult* login = (LoginResult*)header;
+                netmsg_LoginR* login = (netmsg_LoginR*)header;
                 printf("<socket=%d>收到服务端消息 CMD_LOGIN_RESULT 数据长度：%d  \n",
                 _sock, login->dataLength);
             }
             break;
             case CMD_LOGOUT_RESULT:
             {   
-                LogoutResult* logout = (LogoutResult*)header;
+                netmsg_LogoutR* logout = (netmsg_LogoutR*)header;
                 // printf("<socket=%d>收到服务端消息 CMD_LOGOUT_RESULT 数据长度：%d  \n",
                 // _sock, logout->dataLength);
 
@@ -224,7 +224,7 @@ public:
             break;
             case CMD_NEW_USER_JOIN:
             {
-                NewUserJoin* userjoin = (NewUserJoin*)header;
+                netmsg_NewUserJoin* userjoin = (netmsg_NewUserJoin*)header;
                 // printf("<socket=%d>收到服务端消息 CMD_NEW_USER_JOIN 数据长度：%d  \n", 
                 // _sock, userjoin->dataLength);
 
@@ -246,7 +246,7 @@ public:
     }
 
     //发送数据
-    int SendData(DataHeader* header, int nLen)
+    int SendData(netmsg_DataHeader* header, int nLen)
     {
         int ret = SOCKET_ERROR;
         if(isRun() && header)
