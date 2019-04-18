@@ -8,24 +8,6 @@
 #include <vector>
 #include <map>
 
-class CellsendMsg2ClientTask:public CellTask
-{
-    CellClient* _pClient;
-    netmsg_DataHeader* _pHeader;
-
-public:
-    CellsendMsg2ClientTask(CellClient* pClient,netmsg_DataHeader* header)
-    {
-        _pClient = pClient;
-        _pHeader = header;
-    }
-
-    void doTask()
-    {
-        _pClient->SendData(_pHeader);
-        delete _pHeader;
-    }
-};
 //网络数据接受服务类
 class CellServer
 {
@@ -282,8 +264,11 @@ public:
 
     void addSendTask(CellClient* pClient, netmsg_DataHeader* header)
     {
-        CellsendMsg2ClientTask* task = new CellsendMsg2ClientTask(pClient, header);
-        _taskServer.addTask(task);
+        // CellsendMsg2ClientTask* task = new CellsendMsg2ClientTask(pClient, header);
+        _taskServer.addTask([pClient, header](){
+            pClient->SendData(header);
+            delete header;
+        });
     }
 
 private:
