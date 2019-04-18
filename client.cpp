@@ -27,7 +27,7 @@ void cmdThread()
 //windows中fd_set决定最大数量为63个客户端+1个服务器
 //mac 和 windows 修改宏定义
 //linux中最大数量为1024，且写在内核中无法修改
-const int cCount = 8;
+const int cCount = 100;
 //TODO: mac中数量超过252连接失败，客户端二次连接程序报错
 
 //线程数量
@@ -36,6 +36,17 @@ const int tCount = 4;
 EasyTcpClient* client[cCount];
 std::atomic_int sendCount;
 std::atomic_int readyCount;
+
+void recvThread(int begin, int end)
+{
+    while(g_bRun)
+    {
+        for(int n=begin; n<end; n++)
+        {
+            client[n]->OnRun();
+        }
+    }
+}
 void sendThread(int id) //四个线程 ID1～4
 {
     printf("thread<%d>, start\n", id);
@@ -63,6 +74,8 @@ void sendThread(int id) //四个线程 ID1～4
         std::this_thread::sleep_for(t);
     }
 
+    std::thread t1(recvThread, begin, end);
+    t1.detach(); 
     
     netmsg_Login login;
     strcpy(login.userName, "lyd");
@@ -76,7 +89,8 @@ void sendThread(int id) //四个线程 ID1～4
             {
                 sendCount++;
             }
-            client[n]->OnRun();
+            // sleep(1);
+            // client[n]->OnRun();
         }
     }
 
