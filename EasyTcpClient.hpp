@@ -118,7 +118,7 @@ public:
             fd_set fdReads;
             FD_ZERO(&fdReads);
             FD_SET(_sock, &fdReads);
-            timeval t = {1, 0};
+            timeval t = {0, 0};
             int ret = select(_sock+1, &fdReads, 0 ,0, &t);
             // printf("select ret = %d count=%d\n", ret, _ncount++);
             if(ret < 0)
